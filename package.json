@@ -1,0 +1,13 @@
+{
+  "name": "pi-commandcode-desktop",
+  "version": "0.2.0",
+  "private": true,
+  "description": "PI-Desktop plugin: Command Code (commandcode.ai) models over two authKind:none providers, official browser login only (no API key), host-managed reasoning levels declared per model, multi-account rotation, and plan-aware Provider API / legacy generate transport selection.",
+  "license": "MIT",
+  "scripts": {
+    "test": "node tests/run.js && node tests/host.js",
+    "test:unit": "node tests/run.js",
+    "test:host": "node tests/host.js",
+    "sync:catalog": "node tools/sync-catalog.mjs"
+  }
+}

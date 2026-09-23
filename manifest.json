@@ -1,0 +1,304 @@
+{
+  "schemaVersion": 1,
+  "id": "local.pi-commandcode-desktop",
+  "name": "Command Code",
+  "version": "0.2.0",
+  "description": "在 PI-Desktop 里使用 Command Code（commandcode.ai）的模型：把官方 Provider API 的模型目录接入模型选择器，凭据只来自官方浏览器登录（无需 API 密钥），Go 订阅账号自动走 /alpha/generate 旧传输，GOAT / Provider API 账号走标准接口。每个模型的推理档位由插件声明、由宿主的模型设置控制。",
+  "author": "PI-Desktop port of patlux/pi-commandcode-provider",
+  "license": "MIT",
+  "homepage": "https://github.com/patlux/pi-commandcode-provider",
+  "repository": "https://github.com/patlux/pi-commandcode-provider",
+  "main": "main.js",
+  "categories": [
+    "ai"
+  ],
+  "permissions": [
+    "ui.panel",
+    "background.service",
+    "provider.register",
+    "shell.openExternal"
+  ],
+  "engines": {
+    "piDesktop": ">=0.9.0"
+  },
+  "i18n": {
+    "en": {
+      "name": "Command Code",
+      "description": "Use Command Code (commandcode.ai) models in PI-Desktop. Both providers are declared `authKind: none`: the credential comes from the official browser login (nothing is pasted, no PI-Desktop provider key is used), with multi-account rotation across several logins. Each model declares the thinking levels it supports, so the host's own model settings drive the reasoning level. Go subscription accounts and Claude models automatically use the legacy /alpha/generate transport.",
+      "safetyNotes": "This plugin holds no API key and reads no key from PI-Desktop: both declared providers use `authKind: \"none\"`, so the host never sends an Authorization header. The only credential is the one the official browser login delivers, stored in the plugin's own settings file (a plain JSON file in the plugin data directory), plus — as a convenience for a machine that has signed in before — a Command Code / pi / Oh My Pi auth file (~/.commandcode/auth.json, ~/.pi/agent/auth.json, ~/.omp/agent/auth.json) when the plugin's own settings hold nothing. That credential is forwarded only to api.commandcode.ai. The browser login opens commandcode.ai in your system browser via the host and listens on a loopback callback (127.0.0.1, first free port from 5959) that accepts only a POST carrying the matching state token, and it validates the delivered credential against /alpha/whoami before saving it. The plugin runs a loopback-only endpoint (127.0.0.1, fixed high port) that rejects non-loopback Host/Origin requests and attaches the credential upstream. It fetches the public model catalog from api.commandcode.ai — with an ETag, so an unchanged catalog costs one conditional request — and caches it in its own plugin data directory. No telemetry and no third-party server."
+    },
+    "zh-CN": {
+      "name": "Command Code",
+      "description": "在 PI-Desktop 里使用 Command Code（commandcode.ai）的模型。两个供应商都用 `authKind: none`：凭据只来自官方浏览器登录（不用粘贴任何东西，也不读取 PI-Desktop 的供应商密钥），并支持多次登录后的多账户轮换。每个模型声明它支持的推理档位，因此推理强度由宿主自己的模型设置控制。Go 订阅账号与 Claude 模型自动走 /alpha/generate 旧传输。",
+      "safetyNotes": "本插件不保存 API 密钥、也不从 PI-Desktop 读取密钥：两个声明的供应商都是 `authKind: \"none\"`，宿主不会发送 Authorization 头。唯一的凭据来自官方浏览器登录，保存在插件自己的设置文件（插件数据目录里的一个普通 JSON 文件）中；此外，为方便本机已经登录过的情况，当插件设置里没有凭据时会回退到本机已有的 Command Code / pi / Oh My Pi 登录文件（~/.commandcode/auth.json、~/.pi/agent/auth.json、~/.omp/agent/auth.json）。无论哪种，凭据都只转发到 api.commandcode.ai。官方登录会通过宿主在你的系统浏览器里打开 commandcode.ai，并在本机回环地址监听回调（127.0.0.1，从 5959 起的首个空闲端口），只接受带正确 state 令牌的 POST；拿到的凭据会先用 /alpha/whoami 验证再保存。插件在本机回环地址（127.0.0.1，固定高位端口）上运行端点，拒绝非回环的 Host/Origin 请求，并在上行时附加凭据。模型目录取自 api.commandcode.ai 的公开接口，带 ETag 条件请求（目录未变化时只花一次条件请求），缓存写在插件自己的数据目录里。无遥测、无第三方服务器。"
+    }
+  },
+  "safetyNotes": "This plugin stores no API key and reads none from PI-Desktop: both declared providers use `authKind: \"none\"`, so no Authorization header is ever sent by the host. The credential is the one the official browser login delivers, kept in the plugin's own settings file in its data directory; a Command Code / pi / Oh My Pi auth file already on this machine is used only as a fallback when the plugin's settings hold nothing. Either way it is forwarded to api.commandcode.ai and nowhere else. The browser login opens commandcode.ai in the system browser and accepts the delivered credential only over a state-checked loopback POST, validating it against /alpha/whoami first. The loopback endpoint binds 127.0.0.1 and rejects non-loopback Host/Origin. No telemetry, no third-party server.",
+  "ui": {
+    "panel": "renderer/index.html",
+    "title": {
+      "en": "Command Code",
+      "zh-CN": "Command Code"
+    },
+    "width": 780,
+    "height": 820
+  },
+  "activationEvents": [
+    "onStartup"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "id": "commandcode.open",
+        "title": "Command Code: Open Panel",
+        "category": "AI",
+        "keywords": [
+          "commandcode",
+          "command code",
+          "模型",
+          "provider"
+        ]
+      },
+      {
+        "id": "commandcode.refresh",
+        "title": "Command Code: Refresh Model List",
+        "category": "AI",
+        "keywords": [
+          "commandcode",
+          "refresh",
+          "刷新模型"
+        ]
+      },
+      {
+        "id": "commandcode.status",
+        "title": "Command Code: Show Status",
+        "category": "AI",
+        "keywords": [
+          "commandcode",
+          "status",
+          "诊断"
+        ]
+      },
+      {
+        "id": "commandcode.resetTransport",
+        "title": "Command Code: Reset Transport Selection",
+        "category": "AI",
+        "keywords": [
+          "commandcode",
+          "transport",
+          "重置"
+        ]
+      }
+    ],
+    "settings": [
+      {
+        "key": "enabled",
+        "type": "boolean",
+        "title": "启用 Command Code 供应商",
+        "default": true,
+        "scope": "plugin"
+      },
+      {
+        "key": "transport",
+        "type": "select",
+        "title": "传输方式",
+        "default": "auto",
+        "scope": "plugin",
+        "enum": [
+          {
+            "label": "自动（先用标准接口，Go 账号自动降级）",
+            "value": "auto"
+          },
+          {
+            "label": "始终使用 /alpha/generate（Go 订阅账号）",
+            "value": "generate"
+          },
+          {
+            "label": "始终使用标准 Provider API",
+            "value": "provider"
+          }
+        ]
+      },
+      {
+        "key": "zdr",
+        "type": "boolean",
+        "title": "发送零数据保留头（x-cmd-zdr: 1）",
+        "default": false,
+        "scope": "plugin"
+      },
+      {
+        "key": "catalogRefreshMinutes",
+        "type": "number",
+        "title": "模型目录刷新间隔（分钟）",
+        "default": 30,
+        "scope": "plugin"
+      },
+      {
+        "key": "modelSelection",
+        "type": "json",
+        "title": "模型选择（面板管理）",
+        "default": {},
+        "scope": "plugin"
+      },
+      {
+        "key": "credential",
+        "type": "string",
+        "title": "主登录账户凭据（官方登录写入）",
+        "default": "",
+        "scope": "plugin"
+      },
+      {
+        "key": "accounts",
+        "type": "json",
+        "title": "已登录账户（面板管理）",
+        "default": [],
+        "scope": "plugin"
+      },
+      {
+        "key": "modelAccountRules",
+        "type": "json",
+        "title": "按模型切换账户（面板管理）",
+        "default": [],
+        "scope": "plugin"
+      },
+      {
+        "key": "preferredAccount",
+        "type": "string",
+        "title": "优先使用的账户（面板管理）",
+        "default": "auto",
+        "scope": "plugin"
+      },
+      {
+        "key": "visibleModels",
+        "type": "json",
+        "title": "模型白名单（面板管理）",
+        "default": [],
+        "scope": "plugin"
+      },
+      {
+        "key": "hideOutOfPlan",
+        "type": "boolean",
+        "title": "隐藏套餐外模型",
+        "default": false,
+        "scope": "plugin"
+      },
+      {
+        "key": "apiBase",
+        "type": "string",
+        "title": "API 地址（留空用默认）",
+        "default": "",
+        "scope": "plugin"
+      },
+      {
+        "key": "workingDir",
+        "type": "string",
+        "title": "工作目录（留空用进程目录）",
+        "default": "",
+        "scope": "plugin"
+      },
+      {
+        "key": "requestTimeoutMs",
+        "type": "number",
+        "title": "请求超时（毫秒，0 用默认 60000）",
+        "default": 0,
+        "scope": "plugin"
+      },
+      {
+        "key": "streamIdleTimeoutMs",
+        "type": "number",
+        "title": "流空闲超时（毫秒）",
+        "default": 300000,
+        "scope": "plugin"
+      },
+      {
+        "key": "transportRetries",
+        "type": "number",
+        "title": "网络失败重试次数",
+        "default": 5,
+        "scope": "plugin"
+      },
+      {
+        "key": "webSearch",
+        "type": "boolean",
+        "title": "用 Command Code 承载联网搜索（暂未接入）",
+        "default": false,
+        "scope": "plugin"
+      },
+      {
+        "key": "sidebarQuota",
+        "type": "boolean",
+        "title": "在侧边栏显示额度卡片（暂未接入）",
+        "default": false,
+        "scope": "plugin"
+      },
+      {
+        "key": "lastLogin",
+        "type": "json",
+        "title": "上次登录信息（面板管理）",
+        "default": {},
+        "scope": "plugin"
+      }
+    ],
+    "services": [
+      {
+        "id": "provider-host",
+        "label": "Command Code provider endpoint"
+      }
+    ],
+    "providers": [
+      {
+        "id": "commandcode-chat",
+        "name": "Command Code",
+        "vendorKey": "commandcode",
+        "baseUrl": "http://127.0.0.1:41851/v1",
+        "apiStyle": "chat_completions",
+        "authKind": "none",
+        "models": [
+          {
+            "id": "gpt-5.6-luna",
+            "name": "GPT-5.6 Luna",
+            "contextWindow": 1050000,
+            "maxTokens": 32000,
+            "supportsImages": true,
+            "thinkingLevels": [
+              "off",
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ],
+            "defaultThinkingLevel": "medium"
+          }
+        ]
+      },
+      {
+        "id": "commandcode-claude",
+        "name": "Command Code (Claude)",
+        "vendorKey": "commandcode",
+        "baseUrl": "http://127.0.0.1:41851",
+        "apiStyle": "anthropic_messages",
+        "authKind": "none",
+        "models": [
+          {
+            "id": "claude-sonnet-4-6",
+            "name": "Claude Sonnet 4.6",
+            "contextWindow": 1000000,
+            "maxTokens": 32000,
+            "supportsImages": true,
+            "thinkingLevels": [
+              "off",
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ],
+            "defaultThinkingLevel": "medium"
+          }
+        ]
+      }
+    ]
+  },
+  "changelog": "0.2.0 — 适配新版宿主：推理档位交给宿主、只走账号登录、刷新与检测提速。\n\n• 推理档位改为「声明 + 沿用宿主设置」：每个模型在声明里发布 thinkingLevels / defaultThinkingLevel（宿主已支持并校验这两个字段），宿主据此生成会话的推理强度菜单并自行写入 reasoning_effort / thinking，插件原样转发。删除了插件自己的档位白名单（旧的 effortMapForModel），不再存在第二套推理配置。\n• 修掉一个真 bug：Anthropic 方言在开启 thinking 时会把档位写死成 reasoning_effort: \"auto\"，上游不认这个值，等于丢掉用户选的档位；现在改为优先取 thinking.effort，否则按 budget_tokens 映射。\n• 移除全部 API 密钥逻辑：删除「API 密钥」面板分区与 apiKey 设置，删除面板粘贴密钥、环境变量、PI-Desktop 供应商密钥（Bearer 转发）三条路径；凭据只来自官方浏览器登录，本机已有的登录文件仅作回退。旧设置会在加载时一次性迁移（apiKey → 主登录账户，accounts[].apiKey/apiKeyEnv → credential），幂等且不阻断启动。\n• 供应商声明从 4 份收敛为 2 份，全部 authKind: \"none\"、去掉 /pool 前缀：宿主对 authKind:none 的供应商视为「就绪」，无需任何密钥，也不再出现「no API key」警告。\n• 提速：模型目录刷新改为带 ETag 的条件请求（未变化时返回 304，面板显示来源 cache-validated），超时 10s → 4s；账户用量检测由「串行 N 个账户」改为全部并行 + 单飞（重复点击合并为同一次请求），四个账户端点也由「whoami 后串行」改为一次性并行，单账户往返 2 轮 → 1 轮，端到端超时 10s → 6s；计费查询同样并行；本机登录文件的读取加了 30 秒记忆化，请求路径不再每请求做三次同步盘 IO。\n• 面板：删除「API 密钥」分区，「官方登录」升级为「账户登录」（列出已登录账户、设为主账户、移除），诊断区新增目录来源与各端点耗时。\n\n尚未接入：webSearch（联网搜索承载）与 sidebarQuota（侧边栏额度卡片）目前只保存设置值，功能未实现。\n\n升级提示：供应商 id 变更（去掉了 -pool 后缀），原先选中的「插件账户池」模型需要在模型选择器里重选一次；声明里的新档位也要重载插件一次才会被宿主读到。"
+}

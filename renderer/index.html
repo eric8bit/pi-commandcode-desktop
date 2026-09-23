@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Command Code</title>
+    <link rel="stylesheet" href="panel.css" />
+  </head>
+  <body>
+    <p class="sr-only" id="live" role="status" aria-live="polite"></p>
+
+    <header class="page-head">
+      <h1>Command Code</h1>
+      <p class="page-sub">账号登录 · 无需 API 密钥 · 推理档位由宿主设置管理</p>
+    </header>
+
+    <div class="banner" id="banner" role="status" hidden></div>
+
+    <main class="page">
+      <!-- 1. 账户用量 ------------------------------------------------------ -->
+      <section class="card">
+        <div class="card-head">
+          <h2>账户用量</h2>
+          <div class="card-actions">
+            <span class="head-status" id="usageStatus" hidden></span>
+            <button type="button" class="btn small" id="usageRefresh">刷新</button>
+          </div>
+        </div>
+        <div class="usage" id="usageBody"></div>
+      </section>
+
+      <!-- 2. 账户轮换 ------------------------------------------------------ -->
+      <section class="card">
+        <div class="card-head">
+          <h2>账户与轮换</h2>
+          <div class="card-actions">
+            <button
+              type="button"
+              class="btn small"
+              id="addAccount"
+              aria-expanded="false"
+              aria-controls="accountForm"
+            >
+              添加账户
+            </button>
+          </div>
+        </div>
+        <p class="hint">
+          已登录的账户按顺序使用；当前账户达到用量限额（429）或登录失效（401）时自动切换到下一个，全部耗尽时提示最早的重置时间。
+        </p>
+        <div class="subform" id="accountForm" hidden></div>
+        <ul class="list" id="accountList"></ul>
+        <p class="status-line" id="accountStatusLine" hidden></p>
+        <div class="card-foot">
+          <span class="hint" id="poolHint"></span>
+          <div class="card-actions">
+            <button type="button" class="btn small ghost" id="probeWindows">探测配额窗口</button>
+            <button type="button" class="btn small ghost" id="resetAccounts">清除冷却标记</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. 当前使用账户 -------------------------------------------------- -->
+      <section class="card">
+        <div class="card-head">
+          <h2>当前使用账户</h2>
+          <div class="card-actions">
+            <button type="button" class="btn small ghost" id="resetPreferred">重置</button>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="preferredAccount">优先账户</label>
+          <select id="preferredAccount"></select>
+        </div>
+        <p class="hint" id="preferredHint"></p>
+        <p class="status-line" id="preferredStatus" hidden></p>
+      </section>
+
+      <!-- 4. 按模型切换账户 ------------------------------------------------ -->
+      <section class="card">
+        <div class="card-head">
+          <h2>按模型切换账户</h2>
+          <div class="card-actions">
+            <button
+              type="button"
+              class="btn small"
+              id="addRule"
+              aria-expanded="false"
+              aria-controls="ruleForm"
+            >
+              添加规则
+            </button>
+          </div>
+        </div>
+        <p class="hint">
+          把指定模型固定到某个账户，例如把 Claude 模型交给另一个账号；未命中的模型按正常轮换选择，规则里的账户不可用时会自动回落。
+        </p>
+        <div class="subform" id="ruleForm" hidden></div>
+        <ul class="list" id="ruleList"></ul>
+        <p class="status-line" id="ruleStatusLine" hidden></p>
+      </section>
+
+      <!-- 5. 模型白名单 ---------------------------------------------------- -->
+      <section class="card">
+        <div class="card-head">
+          <h2>模型白名单 <span class="count" id="whitelistCount"></span></h2>
+          <div class="card-actions">
+            <button
+              type="button"
+              class="btn small"
+              id="toggleWhitelist"
+              aria-expanded="false"
+              aria-controls="whitelistPanel"
+            >
+              显示全部
+            </button>
+          </div>
+        </div>
+        <p class="hint">勾选要保留的模型，模型选择器就只列出这些；一个都不勾选时则显示全部模型。</p>
+        <div id="whitelistPanel" hidden>
+          <div class="toolbar">
+            <input
+              type="search"
+              class="input"
+              id="whitelistSearch"
+              placeholder="搜索模型 id 或名称…"
+              aria-label="搜索模型"
+            />
+            <button type="button" class="btn small ghost" id="whitelistAll">全选</button>
+            <button type="button" class="btn small ghost" id="whitelistNone">全不选</button>
+          </div>
+          <div class="checklist" id="whitelistList"></div>
+          <p class="status-line" id="whitelistStatus" hidden></p>
+        </div>
+        <p class="hint" id="whitelistSummary"></p>
+      </section>
+
+      <!-- 6. 账号登录 ------------------------------------------------------ -->
+      <section class="card">
+        <div class="card-head">
+          <h2>账号登录</h2>
+          <div class="card-actions">
+            <span class="badge muted" id="credentialBadge">未登录</span>
+            <button type="button" class="btn small primary" id="login">登录新账户</button>
+          </div>
+        </div>
+        <p class="hint">
+          点登录后浏览器会打开 commandcode.ai 授权页，完成后凭据自动保存到本插件，下一次请求即生效——不需要创建或粘贴任何 API 密钥。
+        </p>
+        <ul class="list" id="loginAccountList"></ul>
+        <p class="hint" id="credentialSource"></p>
+        <p class="status-line" id="loginStatus" hidden></p>
+      </section>
+
+      <!-- 8. 高级设置 ------------------------------------------------------ -->
+      <section class="card">
+        <div class="card-head">
+          <h2>高级设置</h2>
+          <div class="card-actions">
+            <span class="count" id="advancedCount"></span>
+            <button
+              type="button"
+              class="btn small"
+              id="toggleAdvanced"
+              aria-expanded="false"
+              aria-controls="advancedBody"
+            >
+              展开
+            </button>
+          </div>
+        </div>
+        <p class="hint">
+          API 地址、工作目录、超时、模型过滤、联网搜索与侧边栏额度卡片等不常修改的选项。
+        </p>
+        <div class="fields" id="advancedBody" hidden>
+          <div id="advancedFields"></div>
+          <p class="status-line" id="advancedStatus" hidden></p>
+        </div>
+      </section>
+
+      <!-- 9. 传输方式 ------------------------------------------------------ -->
+      <section class="card">
+        <div class="card-head">
+          <h2>传输方式</h2>
+          <div class="card-actions">
+            <button type="button" class="btn small ghost" id="resetTransport">重置记忆</button>
+          </div>
+        </div>
+        <div class="seg" id="transportSeg" role="radiogroup" aria-label="传输方式">
+          <button type="button" role="radio" aria-checked="false" data-value="auto" tabindex="-1">
+            自动
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked="false"
+            data-value="generate"
+            tabindex="-1"
+          >
+            始终 generate
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked="false"
+            data-value="provider"
+            tabindex="-1"
+          >
+            始终 provider
+          </button>
+        </div>
+        <p class="hint" id="transportHint"></p>
+        <p class="hint">
+          自动：按套餐判定——Go 订阅账号与 Claude 模型走 /alpha/generate，其余走标准 Provider
+          API；标准接口若返回 403 upgrade_required 也会自动降级并记住该选择。始终
+          generate：强制走旧传输。始终 provider：强制走标准接口，不做降级。
+        </p>
+        <div class="switches">
+          <label class="switch-row">
+            <span class="switch-text">
+              启用供应商
+              <small>关闭后宿主不再向模型选择器发布本插件的模型。</small>
+            </span>
+            <input type="checkbox" class="switch" id="enabled" />
+          </label>
+          <label class="switch-row">
+            <span class="switch-text">
+              零数据保留头
+              <small>请求附带 x-cmd-zdr: 1，要求上游不保留数据。</small>
+            </span>
+            <input type="checkbox" class="switch" id="zdr" />
+          </label>
+        </div>
+      </section>
+
+      <!-- 10. 诊断 --------------------------------------------------------- -->
+      <section class="card">
+        <div class="card-head">
+          <h2>诊断</h2>
+          <div class="card-actions">
+            <span class="badge warn" id="diagBadge" hidden></span>
+            <button
+              type="button"
+              class="btn small"
+              id="toggleDiag"
+              aria-expanded="false"
+              aria-controls="diagBody"
+            >
+              展开
+            </button>
+          </div>
+        </div>
+        <div id="diagBody" hidden>
+          <dl class="kv" id="diagList"></dl>
+          <p class="hint notes" id="diagNotes" hidden></p>
+          <div class="card-foot">
+            <span class="hint mono" id="diagPath"></span>
+            <div class="card-actions">
+              <button type="button" class="btn small ghost" id="openLog">数据目录</button>
+              <button type="button" class="btn small ghost" id="refreshModels">
+                刷新模型目录
+              </button>
+            </div>
+          </div>
+          <p class="status-line" id="diagStatus" hidden></p>
+        </div>
+      </section>
+    </main>
+
+    <script src="panel.js"></script>
+  </body>
+</html>
